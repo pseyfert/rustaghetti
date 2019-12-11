@@ -20,7 +20,8 @@ struct LineWithIt<'a> {
     on_the_section_iter: usize, // how many steps in the current direction have already been made
     which_section_iter: usize, // pointing at the instruction behind the last that has been fully processed
     p: Point,
-    line: &'a Line
+    line: &'a Line,
+    steps_taken: isize
 }
 
 fn step_success(line: &mut LineWithIt) -> bool {
@@ -44,6 +45,7 @@ fn step_success(line: &mut LineWithIt) -> bool {
         },
         _ => println!("panic"),
     }
+    line.steps_taken += 1;
     line.on_the_section_iter += 1;
 
     // the last step finished the segment
@@ -59,6 +61,7 @@ fn reset_line(line: &mut LineWithIt) {
     line.which_section_iter = 0;
     line.p.x = 0;
     line.p.y = 0;
+    line.steps_taken = 0;
 }
 
 fn create_iterable_line<'a>(line: &'a Line) -> LineWithIt{
@@ -66,13 +69,17 @@ fn create_iterable_line<'a>(line: &'a Line) -> LineWithIt{
         on_the_section_iter: 0,
         which_section_iter: 0,
         p: Point{x: 0, y: 0},
-        line: line
+        line: line,
+        steps_taken: 0
     }
 }
 
-fn check_intersect(x: isize, y: isize, line: &Line) -> bool {
-    let mut iterable_line = create_iterable_line(line);
-    while step_success(&mut iterable_line) {
+fn check_intersect(x: isize, y: isize, iterable_line: &mut LineWithIt, abort: isize) -> bool {
+    while step_success(iterable_line) {
+        // not strictly checking an intersection
+        if iterable_line.steps_taken > abort {
+            return false
+        }
         if iterable_line.p.x == x && iterable_line.p.y == y {
             return true
         }
@@ -82,16 +89,23 @@ fn check_intersect(x: isize, y: isize, line: &Line) -> bool {
 
 fn meet(line1: &Line, line2: &Line) -> isize {
     let mut iterable_line1 = create_iterable_line(line1);
-    let mut best: isize = 20000; // guess
+    let mut best: isize = 200000; // guess
     // let mut points: Vec<Point> = Vec::new();
 
     while step_success(&mut iterable_line1) {
-        if manhattan(&iterable_line1.p) > best {
+        if iterable_line1.steps_taken > best {
+            break
+        }
+        if iterable_line1.steps_taken + manhattan(&iterable_line1.p) > best {
             // no need to check, too far out
             continue
         }
-        if check_intersect(iterable_line1.p.x, iterable_line1.p.y, line2) {
-            best = manhattan(&iterable_line1.p);
+        let mut iterable_line2 = create_iterable_line(line2);
+        if check_intersect(iterable_line1.p.x, iterable_line1.p.y, &mut iterable_line2, best - iterable_line1.steps_taken) {
+            let signal = iterable_line1.steps_taken + iterable_line2.steps_taken;
+            if signal < best {
+                best = signal;
+            }
         }
     }
     return best;
