@@ -8,12 +8,12 @@
 
 struct Point {
     x: isize,
-    y: isize
+    y: isize,
 }
 
 struct Line {
     section_lengths: Vec<usize>,
-    section_directions: Vec<char>
+    section_directions: Vec<char>,
 }
 
 struct LineWithIt<'a> {
@@ -21,7 +21,7 @@ struct LineWithIt<'a> {
     which_section_iter: usize, // pointing at the instruction behind the last that has been fully processed
     p: Point,
     line: &'a Line,
-    steps_taken: isize
+    steps_taken: isize,
 }
 
 fn step_success(line: &mut LineWithIt) -> bool {
@@ -33,16 +33,16 @@ fn step_success(line: &mut LineWithIt) -> bool {
     match current_dir {
         'R' => {
             line.p.x += 1;
-        },
+        }
         'L' => {
             line.p.x -= 1;
-        },
+        }
         'U' => {
             line.p.y += 1;
-        },
+        }
         'D' => {
             line.p.y -= 1;
-        },
+        }
         _ => println!("panic"),
     }
     line.steps_taken += 1;
@@ -64,13 +64,13 @@ fn reset_line(line: &mut LineWithIt) {
     line.steps_taken = 0;
 }
 
-fn create_iterable_line<'a>(line: &'a Line) -> LineWithIt{
-    LineWithIt{
+fn create_iterable_line<'a>(line: &'a Line) -> LineWithIt {
+    LineWithIt {
         on_the_section_iter: 0,
         which_section_iter: 0,
-        p: Point{x: 0, y: 0},
+        p: Point { x: 0, y: 0 },
         line: line,
-        steps_taken: 0
+        steps_taken: 0,
     }
 }
 
@@ -78,10 +78,10 @@ fn check_intersect(x: isize, y: isize, iterable_line: &mut LineWithIt, abort: is
     while step_success(iterable_line) {
         // not strictly checking an intersection
         if iterable_line.steps_taken > abort {
-            return false
+            return false;
         }
         if iterable_line.p.x == x && iterable_line.p.y == y {
-            return true
+            return true;
         }
     }
     return false;
@@ -90,18 +90,23 @@ fn check_intersect(x: isize, y: isize, iterable_line: &mut LineWithIt, abort: is
 fn meet(line1: &Line, line2: &Line) -> isize {
     let mut iterable_line1 = create_iterable_line(line1);
     let mut best: isize = 200000; // guess
-    // let mut points: Vec<Point> = Vec::new();
+                                  // let mut points: Vec<Point> = Vec::new();
 
     while step_success(&mut iterable_line1) {
         if iterable_line1.steps_taken > best {
-            break
+            break;
         }
         if iterable_line1.steps_taken + manhattan(&iterable_line1.p) > best {
             // no need to check, too far out
-            continue
+            continue;
         }
         let mut iterable_line2 = create_iterable_line(line2);
-        if check_intersect(iterable_line1.p.x, iterable_line1.p.y, &mut iterable_line2, best - iterable_line1.steps_taken) {
+        if check_intersect(
+            iterable_line1.p.x,
+            iterable_line1.p.y,
+            &mut iterable_line2,
+            best - iterable_line1.steps_taken,
+        ) {
             let signal = iterable_line1.steps_taken + iterable_line2.steps_taken;
             if signal < best {
                 best = signal;
@@ -115,7 +120,7 @@ fn abs(input: isize) -> isize {
     if input > 0 {
         return input;
     } else {
-        return - input;
+        return -input;
     }
 }
 
@@ -149,7 +154,7 @@ fn parse(definition: &str) -> Line {
     let split = definition.split(",");
     let vec: Vec<&str> = split.collect();
 
-    let mut line = Line{
+    let mut line = Line {
         section_lengths: vec![],
         section_directions: vec![],
     };
