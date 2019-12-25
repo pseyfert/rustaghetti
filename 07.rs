@@ -8,119 +8,134 @@
 
 use permutator::HeapPermutationIterator;
 
-fn process(program: &mut [isize], inputs: &[isize]) -> Vec<isize> {
-    let mut retvals = vec![];
-    let mut program_pointer: usize = 0;
+const CODESIZE: usize = 531;
+
+struct Program {
+    band: [isize; CODESIZE],
+    head: usize,
+}
+
+fn process(program: &mut Program, inputs: &[isize]) -> Option<isize> {
     let mut input_iterator = 0;
 
     fn immediate<'a>(
-        program: &'a mut [isize],
+        programband: &'a mut [isize],
         program_pointer: usize,
         offset: usize,
     ) -> &mut isize {
-        &mut program[program_pointer + offset]
+        &mut programband[program_pointer + offset]
     }
-    fn position<'a>(program: &'a mut [isize], program_pointer: usize, offset: usize) -> &mut isize {
-        let addr: usize = program[program_pointer + offset] as usize;
-        &mut program[addr]
+    fn position<'a>(
+        programband: &'a mut [isize],
+        program_pointer: usize,
+        offset: usize,
+    ) -> &mut isize {
+        let addr: usize = programband[program_pointer + offset] as usize;
+        &mut programband[addr]
     }
 
     loop {
-        let opcode = program[program_pointer] % 100;
+        let opcode = program.band[program.head] % 100;
 
-        let first_arg: fn(program: &mut [isize], program_pointer: usize) -> &mut isize;
-        let second_arg: fn(program: &mut [isize], program_pointer: usize) -> &mut isize;
-        let third_arg: fn(program: &mut [isize], program_pointer: usize) -> &mut isize;
+        let first_arg: fn(programband: &mut [isize], program_pointer: usize) -> &mut isize;
+        let second_arg: fn(programband: &mut [isize], program_pointer: usize) -> &mut isize;
+        let third_arg: fn(programband: &mut [isize], program_pointer: usize) -> &mut isize;
 
-        if (program[program_pointer] / 100) % 10 == 0 {
-            fn retval<'a>(program: &'a mut [isize], program_pointer: usize) -> &mut isize {
-                return position(program, program_pointer, 1);
+        if (program.band[program.head] / 100) % 10 == 0 {
+            fn retval<'a>(programband: &'a mut [isize], program_pointer: usize) -> &mut isize {
+                return position(programband, program_pointer, 1);
             }
             first_arg = retval
         } else {
-            fn retval<'a>(program: &'a mut [isize], program_pointer: usize) -> &mut isize {
-                return immediate(program, program_pointer, 1);
+            fn retval<'a>(programband: &'a mut [isize], program_pointer: usize) -> &mut isize {
+                return immediate(programband, program_pointer, 1);
             }
             first_arg = retval
         };
-        if (program[program_pointer] / 1000) % 10 == 0 {
-            fn retval<'a>(program: &'a mut [isize], program_pointer: usize) -> &mut isize {
-                return position(program, program_pointer, 2);
+        if (program.band[program.head] / 1000) % 10 == 0 {
+            fn retval<'a>(programband: &'a mut [isize], program_pointer: usize) -> &mut isize {
+                return position(programband, program_pointer, 2);
             }
             second_arg = retval
         } else {
-            fn retval<'a>(program: &'a mut [isize], program_pointer: usize) -> &mut isize {
-                return immediate(program, program_pointer, 2);
+            fn retval<'a>(programband: &'a mut [isize], program_pointer: usize) -> &mut isize {
+                return immediate(programband, program_pointer, 2);
             }
             second_arg = retval
         };
-        if (program[program_pointer] / 10000) % 10 == 0 {
-            fn retval<'a>(program: &'a mut [isize], program_pointer: usize) -> &mut isize {
-                return position(program, program_pointer, 3);
+        if (program.band[program.head] / 10000) % 10 == 0 {
+            fn retval<'a>(programband: &'a mut [isize], program_pointer: usize) -> &mut isize {
+                return position(programband, program_pointer, 3);
             }
             third_arg = retval
         } else {
-            fn retval<'a>(program: &'a mut [isize], program_pointer: usize) -> &mut isize {
-                return immediate(program, program_pointer, 3);
+            fn retval<'a>(programband: &'a mut [isize], program_pointer: usize) -> &mut isize {
+                return immediate(programband, program_pointer, 3);
             }
             third_arg = retval
         };
 
         match opcode {
             1 => {
-                *third_arg(program, program_pointer) =
-                    *first_arg(program, program_pointer) + *second_arg(program, program_pointer);
-                program_pointer += 4;
+                *third_arg(&mut program.band, program.head) =
+                    *first_arg(&mut program.band, program.head)
+                        + *second_arg(&mut program.band, program.head);
+                program.head += 4;
             }
             2 => {
-                *third_arg(program, program_pointer) =
-                    *first_arg(program, program_pointer) * *second_arg(program, program_pointer);
-                program_pointer += 4;
+                *third_arg(&mut program.band, program.head) =
+                    *first_arg(&mut program.band, program.head)
+                        * *second_arg(&mut program.band, program.head);
+                program.head += 4;
             }
             3 => {
-                *first_arg(program, program_pointer) = inputs[input_iterator];
+                *first_arg(&mut program.band, program.head) = inputs[input_iterator];
                 input_iterator += 1;
-                program_pointer += 2;
+                program.head += 2;
             }
             4 => {
-                retvals.push(*first_arg(program, program_pointer));
-                program_pointer += 2;
+                let retval = *first_arg(&mut program.band, program.head);
+                program.head += 2;
+                return Some(retval);
             }
             5 => {
-                if *first_arg(program, program_pointer) != 0 {
-                    program_pointer = *second_arg(program, program_pointer) as usize;
+                if *first_arg(&mut program.band, program.head) != 0 {
+                    program.head = *second_arg(&mut program.band, program.head) as usize;
                 } else {
-                    program_pointer += 3;
+                    program.head += 3;
                 }
             }
             6 => {
-                if *first_arg(program, program_pointer) == 0 {
-                    program_pointer = *second_arg(program, program_pointer) as usize;
+                if *first_arg(&mut program.band, program.head) == 0 {
+                    program.head = *second_arg(&mut program.band, program.head) as usize;
                 } else {
-                    program_pointer += 3;
+                    program.head += 3;
                 }
             }
             7 => {
-                if *first_arg(program, program_pointer) < *second_arg(program, program_pointer) {
-                    *third_arg(program, program_pointer) = 1;
+                if *first_arg(&mut program.band, program.head)
+                    < *second_arg(&mut program.band, program.head)
+                {
+                    *third_arg(&mut program.band, program.head) = 1;
                 } else {
-                    *third_arg(program, program_pointer) = 0;
+                    *third_arg(&mut program.band, program.head) = 0;
                 }
-                program_pointer += 4;
+                program.head += 4;
             }
             8 => {
-                if *first_arg(program, program_pointer) == *second_arg(program, program_pointer) {
-                    *third_arg(program, program_pointer) = 1;
+                if *first_arg(&mut program.band, program.head)
+                    == *second_arg(&mut program.band, program.head)
+                {
+                    *third_arg(&mut program.band, program.head) = 1;
                 } else {
-                    *third_arg(program, program_pointer) = 0;
+                    *third_arg(&mut program.band, program.head) = 0;
                 }
-                program_pointer += 4;
+                program.head += 4;
             }
-            99 => break,
+            99 => return None,
             _ => println!("panic"),
         }
     }
-    retvals
 }
 
 fn run() {
@@ -154,30 +169,64 @@ fn run() {
         9, 102, 2, 9, 9, 4, 9, 3, 9, 102, 2, 9, 9, 4, 9, 3, 9, 102, 2, 9, 9, 4, 9, 99,
     ];
 
-    let setting = &mut [0, 1, 2, 3, 4];
+    let setting = &mut [5, 6, 7, 8, 9];
     let mut max: Option<isize> = None;
 
     HeapPermutationIterator::new(&mut setting[..]).for_each(|setting| {
-        let mut instance1 = program.clone();
-        let mut instance2 = program.clone();
-        let mut instance3 = program.clone();
-        let mut instance4 = program.clone();
-        let mut instance5 = program.clone();
+        let mut instance1 = Program {
+            band: program.clone(),
+            head: 0,
+        };
+        let mut instance2 = Program {
+            band: program.clone(),
+            head: 0,
+        };
+        let mut instance3 = Program {
+            band: program.clone(),
+            head: 0,
+        };
+        let mut instance4 = Program {
+            band: program.clone(),
+            head: 0,
+        };
+        let mut instance5 = Program {
+            band: program.clone(),
+            head: 0,
+        };
 
-        let retval = process(&mut instance1, &[setting[0], 0]);
-        assert_eq!(retval.len(), 1);
-        let retval = process(&mut instance2, &[setting[1], retval[0]]);
-        assert_eq!(retval.len(), 1);
-        let retval = process(&mut instance3, &[setting[2], retval[0]]);
-        assert_eq!(retval.len(), 1);
-        let retval = process(&mut instance4, &[setting[3], retval[0]]);
-        assert_eq!(retval.len(), 1);
-        let retval = process(&mut instance5, &[setting[4], retval[0]]);
-        assert_eq!(retval.len(), 1);
+        let mut retval = process(&mut instance1, &[setting[0], 0]);
+        retval = process(&mut instance2, &[setting[1], retval.unwrap()]);
+        retval = process(&mut instance3, &[setting[2], retval.unwrap()]);
+        retval = process(&mut instance4, &[setting[3], retval.unwrap()]);
+        retval = process(&mut instance5, &[setting[4], retval.unwrap()]);
+        let mut lastret = retval.unwrap();
+
+        while retval.is_some() {
+            retval = process(&mut instance1, &[retval.unwrap()]);
+            if retval.is_none() {
+                break;
+            }
+            retval = process(&mut instance2, &[retval.unwrap()]);
+            if retval.is_none() {
+                break;
+            }
+            retval = process(&mut instance3, &[retval.unwrap()]);
+            if retval.is_none() {
+                break;
+            }
+            retval = process(&mut instance4, &[retval.unwrap()]);
+            if retval.is_none() {
+                break;
+            }
+            retval = process(&mut instance5, &[retval.unwrap()]);
+            if retval.is_some() {
+                lastret = retval.unwrap();
+            }
+        }
 
         // println!("with setting {:#?} got an output of {}", setting, retval[0]);
-        if max.is_none() || max.unwrap() < retval[0] {
-            max = Some(retval[0]);
+        if max.is_none() || max.unwrap() < lastret {
+            max = Some(lastret);
         }
     });
     println!("max value {}", max.unwrap());
