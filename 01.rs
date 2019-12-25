@@ -8,27 +8,22 @@
 
 // use std::io;
 
-fn single_mass(m: i32) -> i32 {
+fn single_mass(m: &i32) -> i32 {
     (m / 3) - 2
 }
 
-fn single_module(m: i32) -> i32 {
+fn single_module(m: &i32) -> i32 {
     let mut total_fuel: i32 = 0;
     let mut sip = single_mass(m);
     while sip > 0 {
         total_fuel += sip;
-        sip = single_mass(sip);
+        sip = single_mass(&sip);
     }
     total_fuel
 }
 
 fn all_modules(m: &[i32]) -> i32 {
-    let mut sum = 0;
-
-    for module in m.iter() {
-        sum += single_module(*module);
-    }
-    sum
+    m.iter().map(single_module).fold(0, |acc, x| acc + x)
 }
 
 fn main() {
