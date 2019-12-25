@@ -11,7 +11,7 @@ struct Orbiter<'a> {
     own_name: &'a str,
     sum: isize, // negative = not evaluated
     #[allow(dead_code)]
-    directly_orbits: Option<&'a Orbiter<'a>>,
+    directly_orbits: Option<usize>,
 }
 
 struct TmpOrbiter<'a> {
@@ -268,8 +268,14 @@ fn main() {
                         retval.push(Orbiter {
                             own_name: tester.own_name,
                             sum: fringe_element.sum + 1,
-                            // directly_orbits: Some(fringe_element),
-                            directly_orbits: None,
+                            directly_orbits: Some(
+                                orbiters
+                                    .iter()
+                                    .position(|&orbiter| {
+                                        orbiter.own_name == fringe_element.own_name
+                                    })
+                                    .unwrap(),
+                            ),
                         });
                     }
                 }
@@ -286,18 +292,53 @@ fn main() {
         orbiters.extend(new_orbiters.clone());
 
         fringe = new_orbiters;
-        // for fe in fringe {
-        //
-        //     let tmp = process_fringe_element(fe, &parsed);
-        //     let got = tmp.len();
-        //     orbiters.extend(tmp);
-        //     if got > 0 {
-        //         orbitsum += got * orbiters[orbiters.len() - 1].sum as usize;
-        //     }
-        //     for i in orbiters.len() - got..orbiters.len() {
-        //         newfringe.push(&orbiters[i]);
-        //     }
-        // }
     }
     println!("orbitsum should be {}", orbitsum);
+
+    let mut my_orbits = vec![];
+    let mut san_orbits = vec![];
+
+    {
+        let mut myself = orbiters
+            .iter()
+            .position(|&orbiter| orbiter.own_name == "YOU")
+            .unwrap();
+        while myself != 0 {
+            let next_center = orbiters[myself].directly_orbits;
+            if next_center.is_some() {
+                my_orbits.push(next_center.unwrap());
+                myself = next_center.unwrap();
+            }
+        }
+    }
+    {
+        let mut santa = orbiters
+            .iter()
+            .position(|&orbiter| orbiter.own_name == "SAN")
+            .unwrap();
+        while santa != 0 {
+            let next_center = orbiters[santa].directly_orbits;
+            if next_center.is_some() {
+                san_orbits.push(next_center.unwrap());
+                santa = next_center.unwrap();
+            }
+        }
+    }
+
+    let mut my_orbits = my_orbits.iter().rev();
+    let mut san_orbits = san_orbits.iter().rev();
+
+    let mut go_on: bool = true;
+    while go_on {
+        let nm = my_orbits.next();
+        let sm = san_orbits.next();
+        if nm.is_some() && sm.is_some() {
+            go_on = nm.unwrap() == sm.unwrap();
+        }
+    }
+    // break the loop once both iterators point to different values
+    let transfers = my_orbits.count() + san_orbits.count();
+
+    println!("{} orbital transfers needed", transfers);
+    println!(" FIXME: add 2 because ... reasons");
 }
